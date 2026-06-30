@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">My App</string>
+    <string name="branding_text">Built with ApkForge</string>
+    <string name="target_url"></string>
+    <string name="onesignal_app_id">REPLACE_ME</string>
+</resources>
