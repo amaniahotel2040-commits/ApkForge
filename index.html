@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ApkForge — Build Android Apps</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Firebase SDK: project save + Google login -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg:#0b0b0e;
+    --surface:#16141a;
+    --surface-2:#1d1a21;
+    --border:#2a2630;
+    --red:#e0282e;
+    --red-dim:#a31f24;
+    --ember:#ff6a3d;
+    --text:#f5f2ee;
+    --muted:#8b8790;
+    --green:#3ddc84;
+    --radius:14px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";
+    position:fixed;
+    top:0;left:0;right:0;height:340px;
+    background:radial-gradient(circle at 20% -10%, rgba(224,40,46,0.25), transparent 60%),
+               radial-gradient(circle at 80% -20%, rgba(255,106,61,0.12), transparent 55%);
+    pointer-events:none;
+    z-index:0;
+  }
+  .container{max-width:560px;margin:0 auto;padding:0 20px 140px;position:relative;z-index:1;}
+
+  /* HEADER */
+  header{
+    padding:28px 0 18px;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand-mark{
+    width:38px;height:38px;border-radius:10px;
+    background:linear-gradient(135deg,var(--red),var(--ember));
+    display:flex;align-items:center;justify-content:center;
+    font-size:18px;
+    box-shadow:0 0 18px rgba(224,40,46,0.5);
+  }
+  .brand-name{font-family:'Archivo Black',sans-serif;font-size:18px;letter-spacing:0.5px;}
+  .brand-name span{color:var(--red);}
+  .header-icon{
+    width:38px;height:38px;border-radius:10px;background:var(--surface);
+    border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+    color:var(--muted);font-size:16px;cursor:pointer;
+  }
+  .login-banner{
+    background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:13px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;
+  }
+  .login-banner .icon{font-size:18px;}
+  .login-banner .msg{flex:1;font-size:12.5px;color:var(--muted);line-height:1.4;}
+  .login-banner .msg b{color:var(--text);}
+  .login-banner button{
+    background:linear-gradient(135deg,var(--red),var(--ember));
+    color:#fff;border:none;border-radius:8px;padding:9px 14px;
+    font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;
+  }
+  .user-pill{
+    display:flex;align-items:center;gap:8px;background:var(--surface);
+    border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:16px;
+    font-size:12.5px;
+  }
+  .user-pill img{width:26px;height:26px;border-radius:50%;}
+  .user-pill .email{flex:1;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .user-pill .logout{color:var(--red);font-weight:700;cursor:pointer;}
+
+  /* HERO */
+  .hero{padding:8px 0 28px;}
+  .hero-eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;color:var(--ember);letter-spacing:1.5px;text-transform:uppercase;
+    display:flex;align-items:center;gap:8px;margin-bottom:10px;
+  }
+  .hero-eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);}
+  .hero h1{
+    font-family:'Archivo Black',sans-serif;
+    font-size:30px;line-height:1.15;letter-spacing:-0.3px;
+    margin-bottom:8px;
+  }
+  .hero h1 .accent{
+    background:linear-gradient(90deg,var(--red),var(--ember));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .hero p{color:var(--muted);font-size:14.5px;line-height:1.5;max-width:420px;}
+
+  /* SEAM - signature element */
+  .seam{
+    height:2px;width:100%;
+    background:linear-gradient(90deg,transparent,var(--red) 20%,var(--ember) 50%,var(--red) 80%,transparent);
+    border-radius:2px;
+    position:relative;
+    overflow:hidden;
+  }
+  .seam::after{
+    content:"";position:absolute;top:0;left:-40%;width:40%;height:100%;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,0.7),transparent);
+    animation:seam-run 3.2s ease-in-out infinite;
+  }
+  @keyframes seam-run{
+    0%{left:-40%;} 100%{left:100%;}
+  }
+
+  /* TAB SWITCHER */
+  .tabs{
+    display:flex;gap:8px;background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;padding:5px;margin:22px 0;
+  }
+  .tab{
+    flex:1;text-align:center;padding:11px 0;border-radius:9px;
+    font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;
+    transition:all .2s;user-select:none;
+  }
+  .tab.active{
+    background:linear-gradient(135deg,var(--red),var(--red-dim));
+    color:#fff;box-shadow:0 4px 14px rgba(224,40,46,0.35);
+  }
+
+  /* CARD */
+  .card{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius);margin-bottom:16px;overflow:hidden;
+  }
+  .card-seam{height:2px;background:linear-gradient(90deg,var(--red),var(--ember));}
+  .card-head{
+    padding:16px 18px;display:flex;align-items:center;gap:10px;
+    border-bottom:1px solid var(--border);
+  }
+  .step-num{
+    width:24px;height:24px;border-radius:7px;background:rgba(224,40,46,0.15);
+    color:var(--ember);font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .card-head h3{font-size:14.5px;font-weight:700;}
+  .card-body{padding:18px;}
+
+  /* FORM */
+  .field{margin-bottom:16px;}
+  .field:last-child{margin-bottom:0;}
+  label{
+    display:block;font-size:11.5px;font-weight:700;color:var(--muted);
+    text-transform:uppercase;letter-spacing:0.6px;margin-bottom:7px;
+  }
+  label .req{color:var(--red);}
+  input[type=text], input[type=url]{
+    width:100%;background:var(--bg);border:1px solid var(--border);
+    border-radius:10px;padding:13px 14px;color:var(--text);font-size:14px;
+    font-family:'Inter',sans-serif;
+    transition:border-color .2s;
+  }
+  input[type=text]:focus, input[type=url]:focus{
+    outline:none;border-color:var(--red);
+  }
+  input::placeholder{color:#55505c;}
+  .mono-input{font-family:'JetBrains Mono',monospace;font-size:13px;}
+  .hint{font-size:11.5px;color:var(--muted);margin-top:6px;}
+
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+  /* SOURCE SWITCH (URL vs HTML vs Project) */
+  .source-switch{display:flex;gap:8px;margin-bottom:16px;}
+  .source-btn{
+    flex:1;padding:12px 10px;border-radius:10px;border:1px solid var(--border);
+    background:var(--bg);color:var(--muted);font-size:12.5px;font-weight:600;
+    display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;
+  }
+  .source-btn.active{
+    border-color:var(--red);background:rgba(224,40,46,0.12);color:var(--text);
+  }
+
+  /* FILE DROP */
+  .dropzone{
+    border:1.5px dashed var(--border);border-radius:12px;padding:28px 16px;
+    text-align:center;cursor:pointer;transition:border-color .2s;
+  }
+  .dropzone:hover{border-color:var(--red);}
+  .dropzone .icon{font-size:26px;margin-bottom:8px;opacity:0.7;}
+  .dropzone .title{font-size:13.5px;font-weight:600;margin-bottom:3px;}
+  .dropzone .sub{font-size:11.5px;color:var(--muted);}
+
+  /* COLOR PICKER */
+  .color-field{display:flex;gap:10px;}
+  .color-swatch{
+    width:46px;height:46px;border-radius:10px;border:1px solid var(--border);
+    flex-shrink:0;cursor:pointer;
+  }
+
+  /* TOGGLES */
+  .toggle-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 0;border-bottom:1px solid var(--border);
+  }
+  .toggle-row:last-child{border-bottom:none;padding-bottom:0;}
+  .toggle-row:first-child{padding-top:0;}
+  .toggle-info .t-title{font-size:13.5px;font-weight:600;margin-bottom:2px;}
+  .toggle-info .t-sub{font-size:11.5px;color:var(--muted);}
+  .switch{
+    position:relative;width:46px;height:26px;border-radius:14px;
+    background:var(--border);flex-shrink:0;cursor:pointer;transition:background .2s;
+  }
+  .switch::after{
+    content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;
+    border-radius:50%;background:#cfc9d4;transition:all .2s;
+  }
+  .switch.on{background:linear-gradient(135deg,var(--red),var(--ember));}
+  .switch.on::after{left:23px;background:#fff;}
+
+  .toggle-row.important .t-title{color:var(--ember);}
+  .lock-pill{
+    font-size:10px;background:rgba(255,106,61,0.15);color:var(--ember);
+    padding:2px 7px;border-radius:6px;margin-left:6px;font-weight:700;
+  }
+
+  /* PROJECTS LIST (My Projects) */
+  .project-item{
+    display:flex;align-items:center;gap:12px;padding:13px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .project-item:last-child{border-bottom:none;}
+  .project-icon{
+    width:44px;height:44px;border-radius:10px;background:var(--surface-2);
+    display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;
+    border:1px solid var(--border);
+  }
+  .project-info{flex:1;min-width:0;}
+  .project-info .p-name{font-size:14px;font-weight:600;margin-bottom:2px;}
+  .project-info .p-meta{font-size:11.5px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+  .project-actions{display:flex;gap:6px;}
+  .icon-btn{
+    width:32px;height:32px;border-radius:8px;background:var(--bg);
+    border:1px solid var(--border);color:var(--muted);font-size:13px;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+  .empty-state{
+    text-align:center;padding:30px 10px;color:var(--muted);font-size:13px;
+  }
+
+  /* BUILD BUTTON - sticky */
+  .build-bar{
+    position:fixed;bottom:0;left:0;right:0;
+    background:linear-gradient(180deg,transparent,rgba(11,11,14,0.95) 30%);
+    padding:18px 20px 22px;z-index:10;
+  }
+  .build-btn{
+    max-width:520px;margin:0 auto;width:100%;
+    background:linear-gradient(135deg,var(--red),var(--ember));
+    color:#fff;border:none;border-radius:14px;padding:17px;
+    font-size:15.5px;font-weight:700;letter-spacing:0.3px;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    box-shadow:0 8px 28px rgba(224,40,46,0.4);
+    cursor:pointer;
+  }
+
+  /* STATUS BADGE */
+  .status-ready{
+    display:inline-flex;align-items:center;gap:6px;
+    background:rgba(61,220,132,0.12);color:var(--green);
+    font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .status-ready .dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
+
+  /* SECTION TITLE for projects page */
+  .section-title{
+    font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;
+    letter-spacing:0.8px;margin:24px 0 12px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .seam::after{animation:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark">🔥</div>
+      <div class="brand-name">Apk<span>Forge</span></div>
+    </div>
+    <div class="header-icon" id="loginBtn">👤</div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-eyebrow"><span class="dot"></span> SYSTEM READY</div>
+    <h1>যেকোনো ওয়েবসাইট বা<br><span class="accent">HTML ফাইল</span> থেকে APK</h1>
+    <p>লিংক বা কোড দাও, কয়েক ধাপে নিজের Android অ্যাপ বানিয়ে নাও। নিজের ব্র্যান্ডিং, নিজের নিয়ন্ত্রণ।</p>
+  </section>
+
+  <div class="seam"></div>
+
+  <!-- LOGIN STATUS -->
+  <div class="login-banner" id="loginBanner">
+    <div class="icon">☁️</div>
+    <div class="msg"><b>Login করো</b> — যেকোনো ফোন থেকে নিজের প্রজেক্ট দেখতে ও সেভ করতে</div>
+    <button id="googleLoginBtn">Google Login</button>
+  </div>
+
+  <div class="user-pill" id="userPill" style="display:none;">
+    <img id="userAvatar" src="" alt="">
+    <div class="email" id="userEmail"></div>
+    <div class="logout" id="logoutBtn">Logout</div>
+  </div>
+
+  <!-- TAB SWITCHER: Build vs My Projects -->
+  <div class="tabs">
+    <div class="tab active" data-tab="build">নতুন অ্যাপ</div>
+    <div class="tab" data-tab="projects">আমার প্রজেক্ট</div>
+  </div>
+
+  <!-- ===================== BUILD VIEW ===================== -->
+  <div id="view-build">
+
+    <!-- SOURCE TYPE -->
+    <div class="source-switch">
+      <div class="source-btn active" data-source="url">🌐 Website URL</div>
+      <div class="source-btn" data-source="html">📄 HTML File</div>
+    </div>
+
+    <!-- STEP 1: APP INFO -->
+    <div class="card">
+      <div class="card-seam"></div>
+      <div class="card-head">
+        <div class="step-num">1</div>
+        <h3>App Information</h3>
+      </div>
+      <div class="card-body">
+
+        <div class="field">
+          <label>App Name <span class="req">*</span></label>
+          <input type="text" id="inputAppName" placeholder="যেমন: My Movie App">
+        </div>
+
+        <div class="field">
+          <label>Package Name <span class="req">*</span></label>
+          <input type="text" id="inputPackageName" class="mono-input" placeholder="com.apkforge.myapp">
+          <div class="hint">ছোট হাতের অক্ষর, ডট দিয়ে আলাদা — একবার set করলে পরে বদলানো যায় না</div>
+        </div>
+
+        <!-- shown when source = url -->
+        <div class="field" id="field-url">
+          <label>Website URL <span class="req">*</span></label>
+          <input type="url" id="inputWebsiteUrl" placeholder="https://mywebsite.com">
+        </div>
+
+        <!-- shown when source = html, hidden by default -->
+        <div class="field" id="field-html" style="display:none;">
+          <label>HTML File <span class="req">*</span></label>
+          <div class="dropzone" id="htmlDropzone">
+            <div class="icon">📄</div>
+            <div class="title" id="htmlFileLabel">ফাইল আপলোড করো</div>
+            <div class="sub">index.html বা .zip (HTML/CSS/JS/Ads কোড সহ)</div>
+          </div>
+          <input type="file" id="inputHtmlFile" accept=".html,.htm" style="display:none;">
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label>Version Name</label>
+            <input type="text" id="inputVersionName" value="1.0">
+          </div>
+          <div class="field">
+            <label>Version Code</label>
+            <input type="text" id="inputVersionCode" value="1">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Status Bar Color</label>
+          <div class="color-field">
+            <input type="color" id="inputStatusColorPicker" class="color-swatch" value="#e0282e" style="padding:0;border:none;">
+            <input type="text" id="inputStatusColor" class="mono-input" value="#e0282e">
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- STEP 2: BRANDING -->
+    <div class="card">
+      <div class="card-head">
+        <div class="step-num">2</div>
+        <h3>Branding</h3>
+      </div>
+      <div class="card-body">
+
+        <div class="field">
+          <label>App Icon</label>
+          <div class="dropzone" id="iconDropzone">
+            <div class="icon">🖼️</div>
+            <div class="title" id="iconFileLabel">Icon আপলোড করো</div>
+            <div class="sub">512×512 PNG, transparent background ভালো</div>
+          </div>
+          <input type="file" id="inputAppIcon" accept="image/png,image/jpeg" style="display:none;">
+        </div>
+
+        <div class="field">
+          <label>Splash Screen Logo</label>
+          <div class="dropzone" id="splashDropzone">
+            <div class="icon">⚡</div>
+            <div class="title" id="splashFileLabel">Splash logo আপলোড করো</div>
+            <div class="sub">অ্যাপ খোলার সময় এই লোগো দেখাবে</div>
+          </div>
+          <input type="file" id="inputSplashLogo" accept="image/png,image/jpeg" style="display:none;">
+        </div>
+
+        <div class="field">
+          <label>Splash Background Color</label>
+          <div class="color-field">
+            <input type="color" id="inputSplashColorPicker" class="color-swatch" value="#0b0b0e" style="padding:0;border:none;">
+            <input type="text" id="inputSplashColor" class="mono-input" value="#0b0b0e">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Branding Text (Splash-এ নিচে দেখাবে)</label>
+          <input type="text" id="inputBrandingText" placeholder="Built with ApkForge">
+        </div>
+
+      </div>
+    </div>
+
+    <!-- STEP 3: APP BEHAVIOR -->
+    <div class="card">
+      <div class="card-head">
+        <div class="step-num">3</div>
+        <h3>App Settings</h3>
+      </div>
+      <div class="card-body" style="padding-bottom:6px;">
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="t-title">Hide Title Bar</div>
+            <div class="t-sub">ব্রাউজার টুলবার লুকাবে</div>
+          </div>
+          <div class="switch on" data-key="hideTitleBar"></div>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="t-title">Fullscreen Mode</div>
+            <div class="t-sub">গেম/ভিডিওর জন্য, স্ট্যাটাস বার লুকায়</div>
+          </div>
+          <div class="switch" data-key="fullscreen"></div>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="t-title">Loading Spinner</div>
+            <div class="t-sub">পেজ লোড হওয়ার সময় animation</div>
+          </div>
+          <div class="switch on" data-key="loadingSpinner"></div>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="t-title">Pull to Refresh</div>
+            <div class="t-sub">নিচে টেনে রিফ্রেশ</div>
+          </div>
+          <div class="switch on" data-key="pullToRefresh"></div>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="t-title">Media Autoplay</div>
+            <div class="t-sub">ভিডিও/গেম অটো-প্লে অনুমতি</div>
+          </div>
+          <div class="switch" data-key="mediaAutoplay"></div>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="t-title">Camera Access</div>
+            <div class="t-sub">ক্যামেরা পারমিশন</div>
+          </div>
+          <div class="switch" data-key="cameraAccess"></div>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="t-title">Microphone Access</div>
+            <div class="t-sub">মাইক্রোফোন পারমিশন</div>
+          </div>
+          <div class="switch" data-key="microphoneAccess"></div>
+        </div>
+
+        <div class="toggle-row important">
+          <div class="toggle-info">
+            <div class="t-title">Push Notifications <span class="lock-pill">FCM</span></div>
+            <div class="t-sub">OneSignal দিয়ে ইউজারদের নোটিফিকেশন পাঠাও</div>
+          </div>
+          <div class="switch on" data-key="pushNotifications"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+  <!-- ===================== END BUILD VIEW ===================== -->
+
+
+  <!-- ===================== PROJECTS VIEW ===================== -->
+  <div id="view-projects" style="display:none;">
+
+    <div class="card">
+      <div class="card-head">
+        <h3>সেভ করা প্রজেক্ট</h3>
+        <div style="margin-left:auto;" class="status-ready"><span class="dot"></span> Cloud Synced</div>
+      </div>
+      <div class="card-body" id="projectsContainer">
+        <div class="empty-state">প্রজেক্ট লোড হচ্ছে...</div>
+      </div>
+    </div>
+
+  </div>
+  <!-- ===================== END PROJECTS VIEW ===================== -->
+
+</div>
+
+<!-- BUILD PROGRESS OVERLAY -->
+<div id="buildOverlay" style="display:none;position:fixed;inset:0;background:rgba(11,11,14,0.92);z-index:50;display:flex;align-items:center;justify-content:center;">
+  <div style="text-align:center;padding:30px;max-width:320px;">
+    <div style="font-size:40px;margin-bottom:14px;" id="buildOverlayIcon">⚡</div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:8px;" id="buildOverlayTitle">Build শুরু হচ্ছে...</div>
+    <div style="font-size:12.5px;color:#8b8790;line-height:1.5;" id="buildOverlayMsg">সাধারণত ৩-৫ মিনিট সময় লাগে। এই পেজ বন্ধ করো না।</div>
+    <button id="buildOverlayClose" style="display:none;margin-top:20px;background:linear-gradient(135deg,#e0282e,#ff6a3d);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-weight:700;font-size:13.5px;">ঠিক আছে</button>
+  </div>
+</div>
+
+<div class="build-bar">
+  <button class="build-btn" id="buildBtn">⚡ BUILD APK</button>
+</div>
+
+<script>
+  // tab switching: Build vs Projects
+  const tabs = document.querySelectorAll('.tab');
+  const viewBuild = document.getElementById('view-build');
+  const viewProjects = document.getElementById('view-projects');
+  const buildBar = document.querySelector('.build-bar');
+
+  tabs.forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      tabs.forEach(t=>t.classList.remove('active'));
+      tab.classList.add('active');
+      if(tab.dataset.tab === 'build'){
+        viewBuild.style.display = 'block';
+        viewProjects.style.display = 'none';
+        buildBar.style.display = 'block';
+      } else {
+        viewBuild.style.display = 'none';
+        viewProjects.style.display = 'block';
+        buildBar.style.display = 'none';
+        loadMyProjects();
+      }
+    });
+  });
+
+  // source switching: URL vs HTML file
+  const sourceBtns = document.querySelectorAll('.source-btn');
+  const fieldUrl = document.getElementById('field-url');
+  const fieldHtml = document.getElementById('field-html');
+  let currentSourceType = 'url';
+
+  sourceBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      sourceBtns.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      currentSourceType = btn.dataset.source;
+      if(currentSourceType === 'url'){
+        fieldUrl.style.display = 'block';
+        fieldHtml.style.display = 'none';
+      } else {
+        fieldUrl.style.display = 'none';
+        fieldHtml.style.display = 'block';
+      }
+    });
+  });
+
+  // toggle switches
+  document.querySelectorAll('.switch').forEach(sw=>{
+    sw.addEventListener('click', ()=>{
+      sw.classList.toggle('on');
+    });
+  });
+
+  // color pickers sync with text fields
+  function syncColor(pickerId, textId){
+    const picker = document.getElementById(pickerId);
+    const text = document.getElementById(textId);
+    picker.addEventListener('input', ()=> text.value = picker.value);
+    text.addEventListener('input', ()=> { if(/^#[0-9A-Fa-f]{6}$/.test(text.value)) picker.value = text.value; });
+  }
+  syncColor('inputStatusColorPicker','inputStatusColor');
+  syncColor('inputSplashColorPicker','inputSplashColor');
+
+  // dropzone click → trigger file input, show filename
+  function wireDropzone(zoneId, inputId, labelId){
+    const zone = document.getElementById(zoneId);
+    const input = document.getElementById(inputId);
+    const label = document.getElementById(labelId);
+    zone.addEventListener('click', ()=> input.click());
+    input.addEventListener('change', ()=>{
+      if(input.files && input.files[0]){
+        label.textContent = '✅ ' + input.files[0].name;
+      }
+    });
+  }
+  wireDropzone('iconDropzone','inputAppIcon','iconFileLabel');
+  wireDropzone('splashDropzone','inputSplashLogo','splashFileLabel');
+  wireDropzone('htmlDropzone','inputHtmlFile','htmlFileLabel');
+
+  // ---------------------------------------------------
+  // FIREBASE SETUP
+  // 👇 নিজের Firebase project-এর config এখানে বসাও
+  // Firebase Console → Project Settings → General → Your apps → SDK setup
+  // ---------------------------------------------------
+  const firebaseConfig = {
+    apiKey: "AIzaSyC4inju00hISPjS0ROnjg54-ikS08xeQbE",
+    authDomain: "apkforge-6c9fe.firebaseapp.com",
+    projectId: "apkforge-6c9fe",
+    storageBucket: "apkforge-6c9fe.firebasestorage.app",
+    messagingSenderId: "178186718012",
+    appId: "1:178186718012:web:7fca19678a7e72bdf12c39"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  let currentUser = null;
+
+  // 👇 Backend URL — Railway deploy করার পর এখানে নিজের URL বসাও
+  const BACKEND_URL = "https://YOUR-APP.up.railway.app";
+
+  // ---------------------------------------------------
+  // LOGIN / LOGOUT
+  // ---------------------------------------------------
+  const loginBanner = document.getElementById('loginBanner');
+  const userPill = document.getElementById('userPill');
+
+  document.getElementById('googleLoginBtn').addEventListener('click', ()=>{
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(err=>{
+      alert('Login fail হয়েছে: ' + err.message);
+    });
+  });
+  document.getElementById('loginBtn').addEventListener('click', ()=>{
+    if(!currentUser) document.getElementById('googleLoginBtn').click();
+  });
+  document.getElementById('logoutBtn').addEventListener('click', ()=> auth.signOut());
+
+  auth.onAuthStateChanged(user=>{
+    currentUser = user;
+    if(user){
+      loginBanner.style.display = 'none';
+      userPill.style.display = 'flex';
+      document.getElementById('userAvatar').src = user.photoURL || '';
+      document.getElementById('userEmail').textContent = user.email || '';
+      loadMyProjects();
+    } else {
+      loginBanner.style.display = 'flex';
+      userPill.style.display = 'none';
+    }
+  });
+
+  // ---------------------------------------------------
+  // FILE → BASE64 HELPER
+  // ---------------------------------------------------
+  function fileToBase64(file){
+    return new Promise((resolve,reject)=>{
+      if(!file){ resolve(''); return; }
+      const reader = new FileReader();
+      reader.onload = ()=> resolve(reader.result.split(',')[1]); // remove data:...base64, prefix
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ---------------------------------------------------
+  // COLLECT FORM DATA
+  // ---------------------------------------------------
+  async function collectFormData(){
+    const settings = {};
+    document.querySelectorAll('.switch[data-key]').forEach(sw=>{
+      settings[sw.dataset.key] = sw.classList.contains('on');
+    });
+
+    const iconFile = document.getElementById('inputAppIcon').files[0];
+    const splashFile = document.getElementById('inputSplashLogo').files[0];
+    const htmlFile = document.getElementById('inputHtmlFile').files[0];
+
+    return {
+      appName: document.getElementById('inputAppName').value.trim(),
+      packageName: document.getElementById('inputPackageName').value.trim(),
+      sourceType: currentSourceType,
+      websiteUrl: document.getElementById('inputWebsiteUrl').value.trim(),
+      htmlContent: htmlFile ? await fileToBase64(htmlFile) : '',
+      versionName: document.getElementById('inputVersionName').value.trim() || '1.0',
+      versionCode: document.getElementById('inputVersionCode').value.trim() || '1',
+      statusBarColor: document.getElementById('inputStatusColor').value.trim(),
+      appIconBase64: iconFile ? await fileToBase64(iconFile) : '',
+      splashLogoBase64: splashFile ? await fileToBase64(splashFile) : '',
+      splashBgColor: document.getElementById('inputSplashColor').value.trim(),
+      brandingText: document.getElementById('inputBrandingText').value.trim(),
+      settings
+    };
+  }
+
+  // ---------------------------------------------------
+  // BUILD APK — backend-কে call করা
+  // ---------------------------------------------------
+  const buildOverlay = document.getElementById('buildOverlay');
+  const buildOverlayTitle = document.getElementById('buildOverlayTitle');
+  const buildOverlayMsg = document.getElementById('buildOverlayMsg');
+  const buildOverlayIcon = document.getElementById('buildOverlayIcon');
+  const buildOverlayClose = document.getElementById('buildOverlayClose');
+
+  document.getElementById('buildBtn').addEventListener('click', async ()=>{
+    const data = await collectFormData();
+
+    if(!data.appName || !data.packageName){
+      alert('App Name আর Package Name দেওয়া জরুরি');
+      return;
+    }
+    if(data.sourceType === 'url' && !data.websiteUrl){
+      alert('Website URL দাও');
+      return;
+    }
+    if(data.sourceType === 'html' && !data.htmlContent){
+      alert('HTML ফাইল আপলোড করো');
+      return;
+    }
+
+    buildOverlay.style.display = 'flex';
+    buildOverlayIcon.textContent = '⚡';
+    buildOverlayTitle.textContent = 'Build শুরু হচ্ছে...';
+    buildOverlayMsg.textContent = 'সাধারণত ৩-৫ মিনিট সময় লাগে। এই পেজ বন্ধ করো না।';
+    buildOverlayClose.style.display = 'none';
+
+    try{
+      const res = await fetch(`${BACKEND_URL}/api/build`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(data)
+      });
+      const result = await res.json();
+
+      if(!result.success){
+        throw new Error(result.error || 'Build শুরু করতে সমস্যা');
+      }
+
+      // project সেভ করা Firestore-এ (login করা থাকলে)
+      if(currentUser){
+        await db.collection('users').doc(currentUser.uid).collection('projects').add({
+          ...data,
+          appIconBase64: undefined, // বড় data Firestore-এ না রেখে শুধু মেটাডেটা রাখা
+          splashLogoBase64: undefined,
+          htmlContent: undefined,
+          buildId: result.buildId,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+
+      pollBuildStatus(result.buildId);
+
+    } catch(err){
+      buildOverlayIcon.textContent = '❌';
+      buildOverlayTitle.textContent = 'সমস্যা হয়েছে';
+      buildOverlayMsg.textContent = err.message;
+      buildOverlayClose.style.display = 'inline-block';
+    }
+  });
+
+  // ---------------------------------------------------
+  // BUILD STATUS POLLING — প্রতি ১০ সেকেন্ডে চেক করা
+  // ---------------------------------------------------
+  function pollBuildStatus(buildId){
+    const interval = setInterval(async ()=>{
+      try{
+        const res = await fetch(`${BACKEND_URL}/api/status/${buildId}`);
+        const status = await res.json();
+
+        if(status.status === 'success'){
+          clearInterval(interval);
+          buildOverlayIcon.textContent = '✅';
+          buildOverlayTitle.textContent = 'APK তৈরি হয়ে গেছে!';
+          buildOverlayMsg.innerHTML = status.downloadUrl
+            ? `<a href="${status.downloadUrl}" style="color:#ff6a3d;font-weight:700;" target="_blank">এখানে চাপো ডাউনলোড করতে</a>`
+            : 'GitHub Actions-এ গিয়ে artifact ডাউনলোড করো।';
+          buildOverlayClose.style.display = 'inline-block';
+        } else if(status.status === 'failed'){
+          clearInterval(interval);
+          buildOverlayIcon.textContent = '❌';
+          buildOverlayTitle.textContent = 'Build fail হয়েছে';
+          buildOverlayMsg.textContent = 'আবার চেষ্টা করো, অথবা settings চেক করো।';
+          buildOverlayClose.style.display = 'inline-block';
+        } else {
+          buildOverlayMsg.textContent = status.message || 'Build হচ্ছে...';
+        }
+      } catch(err){
+        // network glitch হলে polling চালিয়ে যাওয়া, বন্ধ না করা
+      }
+    }, 10000);
+  }
+
+  buildOverlayClose.addEventListener('click', ()=>{
+    buildOverlay.style.display = 'none';
+  });
+
+  // ---------------------------------------------------
+  // MY PROJECTS — Firestore থেকে লোড করা
+  // ---------------------------------------------------
+  async function loadMyProjects(){
+    const container = document.getElementById('projectsContainer');
+    if(!currentUser){
+      container.innerHTML = '<div class="empty-state">প্রজেক্ট দেখতে আগে Login করো</div>';
+      return;
+    }
+    container.innerHTML = '<div class="empty-state">লোড হচ্ছে...</div>';
+
+    try{
+      const snap = await db.collection('users').doc(currentUser.uid)
+        .collection('projects').orderBy('createdAt','desc').get();
+
+      if(snap.empty){
+        container.innerHTML = '<div class="empty-state">এখনো কোনো প্রজেক্ট নেই — নতুন অ্যাপ বানিয়ে শুরু করো</div>';
+        return;
+      }
+
+      container.innerHTML = '';
+      snap.forEach(doc=>{
+        const p = doc.data();
+        const item = document.createElement('div');
+        item.className = 'project-item';
+        item.innerHTML = `
+          <div class="project-icon">${p.sourceType === 'html' ? '📄' : '🌐'}</div>
+          <div class="project-info">
+            <div class="p-name">${escapeHtml(p.appName || 'Untitled')}</div>
+            <div class="p-meta">${escapeHtml(p.packageName || '')} · v${escapeHtml(p.versionName || '1.0')}</div>
+          </div>
+          <div class="project-actions">
+            <div class="icon-btn" title="Rebuild">⚡</div>
+          </div>`;
+        container.appendChild(item);
+      });
+    } catch(err){
+      container.innerHTML = '<div class="empty-state">প্রজেক্ট লোড করতে সমস্যা হয়েছে</div>';
+    }
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+</script>
+
+</body>
+</html>
